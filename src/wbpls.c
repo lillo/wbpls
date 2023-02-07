@@ -35,33 +35,16 @@ const char H8[][16] = {
 };
 */
 
+/// @brief Hadamard matrix of size 16x16
 const unsigned short H16[16] = {
-  32768, 
-  49152,
-  40960,
-  53248,
-  34816,
-  50176,
-  41472,
-  53504,
-  32896,
-  49216,
-  40992,
-  53264,
-  34824,
-  50180,
-  41474,
-  53505
+  32768, 49152, 40960, 53248,
+  34816, 50176, 41472, 53504,
+  32896, 49216, 40992, 53264,
+  34824, 50180, 41474, 53505
 };
 
 unsigned f1f2[2][SAMPLES_COUNT] = {0};
 unsigned f3f4[2][SAMPLES_COUNT] = {0};
-
-/*
-unsigned int intcos(double c) {
-  return ((cos(c)+1)*((UINT_MAX-1) >> 1));
-}
-*/
 
 
 /// @brief Assume len(buffer) == BUFFER_SIZE
@@ -71,7 +54,7 @@ unsigned int intcos(double c) {
 void mod_data(char* data, unsigned int f[2][SAMPLES_COUNT], unsigned int * buffer) {
   for(size_t i = 0, k=BUFFER_SIZE; i < (PACKET_SIZE/sizeof(unsigned long)); i += sizeof(unsigned long)){
     unsigned long bitset = *((unsigned long*)(data + i));
-    while(bitset != 0){
+    for(size_t z=0; z < sizeof(bitset) * 8; ++z){
       for(size_t j=SAMPLES_COUNT - 1; j >=0; --j){ 
         buffer[--k] = f[bitset & 0x1][j];
       }
@@ -86,6 +69,9 @@ void demod_data(unsigned int* buffer, float f[2], char* data){
 
 }
 
+/// @brief Sample the cosine of a given frequency
+/// @param freq the frequency 
+/// @param table it stores the result of sampling the cosine
 void tabulate_cosine(float freq, unsigned int table[SAMPLES_COUNT]){
   float delta = 1.0f/(SAMPLES_COUNT * freq);
 
@@ -104,6 +90,11 @@ void init(const Configuration* conf) {
   tabulate_cosine(conf->fsc1, f3f4[1]);
 }
 
+
+/// @brief Compute the spreading code for the watermarking
+/// @param data  
+/// @param row 
+/// @param buffer  
 void spreading(unsigned char data, size_t row, char buffer[WATERMARK_LENGTH]){
   memset(buffer, 0, WATERMARK_LENGTH);
   for(size_t i=0; i < WATERMARK_LENGTH; i += WATERMARK_INFO_LENGTH){
