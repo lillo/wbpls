@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14.0)
-project(wbpls VERSION 0.1.0 DESCRIPTION "An example of LLVM Transformation" LANGUAGES C)
+project(wbpls VERSION 0.1.0 DESCRIPTION "A library providing physical layer security primitives" LANGUAGES C)
 
 set(CMAKE_C_STANDARD_REQUIRED 99)
 
