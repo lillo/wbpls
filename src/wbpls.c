@@ -4,15 +4,7 @@
 #include <math.h>
 #include "wbpls.h"
 
-#define COS_BITS 14
-#define COS_BASE 1u << COS_BITS
-#define FLOAT_TO_INT(f) ((unsigned int) ((f) * (COS_BASE)))
-#define INT_TO_FLOAT(i) ((float) (i) >> COS_BITS)
-#define SAMPLES_COUNT 80
-#define WATERMARK_INFO_LENGTH 8
-#define WATERMARK_LENGTH WATERMARK_INFO_LENGTH * 16
-#define BUFFER_SIZE SAMPLES_COUNT*PACKET_SIZE * 8
-#define TS 12000
+#include "wbpls_internal.h"
 
 /*
 const char H8[][16] = {
@@ -35,6 +27,13 @@ const char H8[][16] = {
 };
 */
 
+const double deffreq0msg = 2.0;
+const double deffreq1msg = 4.0;
+const double deffreq0sc = 7.0;
+const double deffreq1sc = 9.0;
+
+const Configuration Default = {deffreq0msg, deffreq1msg, deffreq0sc, deffreq1sc};
+
 /// @brief Hadamard matrix of size 16x16
 const unsigned short H16[16] = {
   32768, 49152, 40960, 53248,
@@ -53,9 +52,13 @@ unsigned f3f4[2][SAMPLES_COUNT] = {0};
 /// @param buffer the resulting buffer 
 void mod_data(char* data, unsigned int f[2][SAMPLES_COUNT], unsigned int * buffer) {
   for(size_t i = 0, k=BUFFER_SIZE; i < (PACKET_SIZE/sizeof(unsigned long)); i += sizeof(unsigned long)){
+    //printf("It: %d\n - k = %d", i, k);
     unsigned long bitset = *((unsigned long*)(data + i));
+    //printf(" bitset: %x", bitset);
     for(size_t z=0; z < sizeof(bitset) * 8; ++z){
-      for(size_t j=SAMPLES_COUNT - 1; j >=0; --j){ 
+      //printf("z= %d", z);
+      for(size_t j=SAMPLES_COUNT; 0 < j; --j){
+        //printf("j = %d", j); 
         buffer[--k] = f[bitset & 0x1][j];
       }
       bitset >>= 1;
@@ -73,10 +76,14 @@ void demod_data(unsigned int* buffer, float f[2], char* data){
 /// @param freq the frequency 
 /// @param table it stores the result of sampling the cosine
 void tabulate_cosine(float freq, unsigned int table[SAMPLES_COUNT]){
-  float delta = 1.0f/(SAMPLES_COUNT * freq);
+  float delta = 1.0 / SAMPLES_COUNT;
 
-  for(unsigned int i=0; i < SAMPLES_COUNT; ++i)
-    table[i] = FLOAT_TO_INT(cosf(2*M_PI*freq*delta*i));
+  //printf("\n\nTabulate cos(%f)\n\n", freq);
+  for(unsigned int i=0; i < SAMPLES_COUNT; ++i){
+    //printf("%f,", cosf(2 * M_PI * freq * delta * i));
+    table[i] = FLOAT_TO_INT(cosf(2 * M_PI * freq * delta * i));
+  }
+  printf("\n\n");
 }
 
 void init(const Configuration* conf) {

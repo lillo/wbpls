@@ -3,17 +3,17 @@
 
 #define PACKET_SIZE 8
 
-const double deffreq0msg = 2400.0;
-const double deffreq1msg = 3600.0;
-const double deffreq0sc = 4900.0;
-const double deffreq1sc = 5100.0;
+extern const double deffreq0msg;
+extern const double deffreq1msg;
+extern const double deffreq0sc;
+extern const double deffreq1sc;
 
 // Types
 typedef struct {
   unsigned int fmsg0, fmsg1, fsc0, fsc1;
 } Configuration;
 
-const Configuration Default = {deffreq0msg, deffreq1msg, deffreq0sc, deffreq1sc};
+extern const Configuration Defaultpyth;
 
 typedef struct {
   char data[PACKET_SIZE];
