@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <wbpls.h>
 #include <wbpls_internal.h>
 
