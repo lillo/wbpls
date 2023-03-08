@@ -1,12 +1,7 @@
 #include <stdio.h>
-#include <math.h>
-#include <wbpls.h>
-#include "wbpls_internal.h"
-
-#include <stdio.h>
-#include <stdlib.h>
 #include <wbpls.h>
 #include <wbpls_internal.h>
+
 
 void formatted_print(char* buffer) {
   for(size_t i=0; i < BUFFER_SIZE; ++i)
