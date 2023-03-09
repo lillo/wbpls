@@ -18,16 +18,18 @@ int main(){
   formatted_print(msg);
 
   printf("Ready to compute the sprearding code...\n");
-  spreading(msg[0], 0, spreading_code);
+  spreading(msg[0], 4, spreading_code);
   printf("Sprearding code: done!\n");
 
   formatted_print(spreading_code);
   
   printf("Ready to compute the watermarked msg...\n");
   for (size_t i = 0; i < BUFFER_SIZE; ++i)
-    msg[i] |= spreading_code[i];
+    msg[i] ^= spreading_code[i];
 
   formatted_print(msg);
+  
+  printf("Extracted watermark: %x\n", extract_watermark(msg, 4));
 
   return EXIT_SUCCESS;  
 }

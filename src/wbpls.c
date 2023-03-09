@@ -41,6 +41,31 @@ void spreading(unsigned char data, size_t row, char buffer[BUFFER_SIZE])
   }
 }
 
+unsigned char reverse_bits(unsigned char b) {
+   b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+   b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+   b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+   return b;
+}
+
+unsigned short extract_watermark(char bitstream[BUFFER_SIZE], size_t hadamard_row){
+  char correlation[BUFFER_SIZE] = {0};
+  unsigned short extracted_wat = 0;
+  unsigned char max = 0;
+
+  for(size_t i=0; i < WATERMARK_INFO_LENGTH; ++i){
+    correlation[i] = __builtin_popcount(bitstream[i] & H8[hadamard_row]);
+    max = (max < correlation[i] ? correlation[i] : max);
+  }
+
+  for(size_t i=0; i < WATERMARK_INFO_LENGTH; ++i){
+    extracted_wat |= (correlation[i] > 0.7 * max);
+    extracted_wat <<= 1;
+  }
+
+  return reverse_bits(extracted_wat);
+}
+
 void send(Packet pkt)
 {
   // Alloca buffer
@@ -55,7 +80,7 @@ void send(Packet pkt)
 
   // 2. Moltiplicazione tra il messaggio e lo spreading code
   for (size_t i = 0; i < BUFFER_SIZE; ++i)
-    watermarked_buffer[i] = pkt->data[i] | spreading_code[i];
+    watermarked_buffer[i] = pkt->data[i] ^ spreading_code[i];
 
   // 3. split to datagrams and transmit watermarked_buffer
 }
