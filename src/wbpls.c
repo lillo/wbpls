@@ -9,7 +9,7 @@
 
 const Configuration Default;
 
-#define HADAMARD_ROW 6 
+#define HADAMARD_ROW 5
 
 /// @brief Hadamard matrix of size 16x16
 /*
@@ -64,21 +64,27 @@ unsigned char reverse_bits(unsigned char b) {
 }
 */
 
-unsigned short extract_watermark(char bitstream[BUFFER_SIZE], size_t hadamard_row){
+unsigned char extract_watermark(char bitstream[BUFFER_SIZE], size_t hadamard_row){
   char correlation[BUFFER_SIZE] = {0};
-  unsigned short extracted_wat = 0;
+  unsigned char extracted_wat = 0;
   unsigned char max = 0;
   
+  printf("Msg ricevuto:");
+  formatted_print(bitstream);
+  puts("");
+
   for(size_t i=0; i < WATERMARK_INFO_LENGTH; ++i){
     correlation[i] = __builtin_popcount(bitstream[i] & H8[hadamard_row]);
     max = (max < correlation[i] ? correlation[i] : max);
   }
 
   for(size_t i=0; i < WATERMARK_INFO_LENGTH; ++i){
-    extracted_wat |= (correlation[i] > 0.8 * max);
+    if(correlation[i] >= 0.5 * max)
+      extracted_wat |= 0x1;
+
     extracted_wat <<= 1;   
-    //if(i < WATERMARK_INFO_LENGTH - 1)  
-    printf("%d", (correlation[i] > 0.8 * max));
+      //if(i < WATERMARK_INFO_LENGTH - 1)  
+    printf("%d", (correlation[i] >= 0.5 * max));
   }
 
   printf("\nCorrelation:\n");
@@ -118,7 +124,7 @@ void send(const char*msg, size_t length)
       msg_buffer = msg + BUFFER_SIZE *i;
 
     // 1. Watermark primi 8 bit del messaggio pkt->data[0]
-    // Calcolo dello spreading code
+    // Calcolo del watermark (risultato della moltiplicazione del byte informativo per la matrice di hadamard)
     spreading(msg_buffer[0], HADAMARD_ROW, spreading_code);
 
     printf("Watermark in the send: %hhX\n", msg_buffer[0]);
@@ -129,6 +135,11 @@ void send(const char*msg, size_t length)
     // 2. Moltiplicazione tra il messaggio e lo spreading code
     for (size_t i = 0; i < BUFFER_SIZE; ++i)
       watermarked_buffer[i] = msg_buffer[i] ^ spreading_code[i];
+
+    printf("Messaggio con watermark:");
+    formatted_print(watermarked_buffer);
+    puts("");
+    printf("Msg: %s\n", watermarked_buffer);
 
     // 3. Send the watermarked msg over the network
     // TODO: to change

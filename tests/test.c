@@ -34,14 +34,14 @@ int main(){
   printf("Extracted watermark: %x\n", extract_watermark(msg, 5));
 */
   
-  char msg[17] = "This-is-a-secret"; 
-  char buffer[17] = {0};
+  char msg[9] = "This-is-"; 
+  char buffer[9] = {0};
 
   send(msg, strlen(msg));
 
   printf("Messaggio originale:\n-%s-\n", msg);
 
-  recv(buffer,16);
+  recv(buffer,8);
 
   printf("Messaggio letto:\n-%s-\n", buffer);
 
