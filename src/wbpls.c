@@ -12,13 +12,13 @@ const Configuration Default;
 #define HADAMARD_ROW 5
 
 /// @brief Hadamard matrix of size 16x16
-/*
+
 const unsigned short H16[16] = {
     32768, 49152, 40960, 53248,
     34816, 50176, 41472, 53504,
     32896, 49216, 40992, 53264,
     34824, 50180, 41474, 53505};
-*/
+
 
 /// @brief Hadamard matrix of size 8x8
 const unsigned short H8[8] = {
@@ -35,9 +35,9 @@ void init(const Configuration *conf)
   }
 }
 
-static void formatted_print(char* buffer) {
+static void formatted_print(unsigned short* buffer) {
   for(size_t i=0; i < BUFFER_SIZE; ++i)
-    printf("%hhX|", buffer[i]);
+    printf("%04hX|", buffer[i]);
   puts("");
 }
 
@@ -45,13 +45,13 @@ static void formatted_print(char* buffer) {
 /// @param data a byte representing the watermark
 /// @param row the row of Hadamard to use for the spreading
 /// @param buffer an output buffer storing the spreading_code
-void spreading(unsigned char data, size_t row, char buffer[BUFFER_SIZE])
+void spreading(unsigned char data, size_t row, unsigned short buffer[BUFFER_SIZE])
 {
   memset(buffer, 0, BUFFER_SIZE);
 
   for(int i = WATERMARK_INFO_LENGTH - 1; i > -1; --i, data >>= 1){
     if(data & 0x1)
-      buffer[i] = H8[row];
+      buffer[i] = H16[row];
   }
 }
 
@@ -64,30 +64,27 @@ unsigned char reverse_bits(unsigned char b) {
 }
 */
 
-unsigned char extract_watermark(char bitstream[BUFFER_SIZE], size_t hadamard_row){
+unsigned char extract_watermark(unsigned short bitstream[BUFFER_SIZE], size_t hadamard_row){
   char correlation[BUFFER_SIZE] = {0};
   unsigned char extracted_wat = 0;
   unsigned char max = 0;
   
-  printf("Msg ricevuto:");
-  formatted_print(bitstream);
-  puts("");
-
   for(size_t i=0; i < WATERMARK_INFO_LENGTH; ++i){
-    correlation[i] = __builtin_popcount(bitstream[i] & H8[hadamard_row]);
+    correlation[i] = __builtin_popcount(bitstream[i] & H16[hadamard_row]);
     max = (max < correlation[i] ? correlation[i] : max);
   }
 
+  printf("Bits of extracted watermark:");
   for(size_t i=0; i < WATERMARK_INFO_LENGTH; ++i){
-    if(correlation[i] >= 0.5 * max)
+    if(correlation[i] >= 0.7 * max)
       extracted_wat |= 0x1;
-
-    extracted_wat <<= 1;   
+    if(i != WATERMARK_INFO_LENGTH - 1)
+      extracted_wat <<= 1;   
       //if(i < WATERMARK_INFO_LENGTH - 1)  
-    printf("%d", (correlation[i] >= 0.5 * max));
+    printf("%d", (correlation[i] >= 0.7 * max));
   }
 
-  printf("\nCorrelation:\n");
+  printf("\nCorrelation vector:\n");
   for(size_t i=0; i < BUFFER_SIZE; ++i)
     printf("%d|", correlation[i]);
   puts("");
@@ -98,58 +95,46 @@ unsigned char extract_watermark(char bitstream[BUFFER_SIZE], size_t hadamard_row
 void send(const char*msg, size_t length)
 {
   // Alloca buffer
-  char watermarked_buffer[BUFFER_SIZE];
-  char spreading_code[BUFFER_SIZE];
-  char tmp_buffer[BUFFER_SIZE];
+  assert(length == 16);
 
-  size_t num_blocks = (length / BUFFER_SIZE);
-  size_t rem_bytes = length % BUFFER_SIZE;
-
-  if(rem_bytes > 0)
-    ++num_blocks;
-
-  assert(num_blocks < USHRT_MAX);
+  unsigned short watermarked_buffer[BUFFER_SIZE];
+  unsigned short watermark[BUFFER_SIZE];
+  unsigned short tmp_buffer[BUFFER_SIZE];
+  unsigned short *msg_buffer = (unsigned short*) msg;
+  unsigned char first_byte = msg[0];
 
   // TODO: change when network modem lib available
-  FILE* f = fopen("transit_data.dat", "wb+");
+  FILE* f = fopen("transit_data.dat", "wb");
 
-  for(size_t i = 0; i < num_blocks; ++i){
-    const char* msg_buffer;
-    
-    if(i == num_blocks - 1 && rem_bytes > 0){
-      memset(tmp_buffer, 0, BUFFER_SIZE);
-      memcpy(tmp_buffer, msg + BUFFER_SIZE *i, rem_bytes);
-      msg_buffer = tmp_buffer;
-    }else 
-      msg_buffer = msg + BUFFER_SIZE *i;
+  printf("Original message in hex:");
+  formatted_print(msg_buffer);
 
-    // 1. Watermark primi 8 bit del messaggio pkt->data[0]
-    // Calcolo del watermark (risultato della moltiplicazione del byte informativo per la matrice di hadamard)
-    spreading(msg_buffer[0], HADAMARD_ROW, spreading_code);
+  // 1. Watermark primi 8 bit del messaggio 
+  // Calcolo del watermark (risultato della moltiplicazione del byte informativo per la matrice di hadamard)
+  spreading(first_byte, HADAMARD_ROW, watermark);
 
-    printf("Watermark in the send: %hhX\n", msg_buffer[0]);
+  printf("Info bits in the send is %hhX as hex and %c as char\n", first_byte, first_byte);
 
-  printf("Spreading code in the send\n");
-  formatted_print(spreading_code);
+  printf("Watermark in the send: ");
+  formatted_print(watermark);
+  puts("");
 
     // 2. Moltiplicazione tra il messaggio e lo spreading code
     for (size_t i = 0; i < BUFFER_SIZE; ++i)
-      watermarked_buffer[i] = msg_buffer[i] ^ spreading_code[i];
+      watermarked_buffer[i] = msg_buffer[i] ^ watermark[i];
 
-    printf("Messaggio con watermark:");
+    printf("Watermarked message in hex: ");
     formatted_print(watermarked_buffer);
-    puts("");
-    printf("Msg: %s\n", watermarked_buffer);
+    printf("Watermarked message as a string: %s\n", (const char*)watermarked_buffer);
 
     // 3. Send the watermarked msg over the network
     // TODO: to change
-    unsigned short seq_num = (unsigned short) i;
-    fwrite(&seq_num, sizeof(unsigned short), 1, f);
+    //unsigned short seq_num = (unsigned short) i;
+    //fwrite(&seq_num, sizeof(unsigned short), 1, f);
     //char broken_byte = watermarked_buffer[0] | 0xff;
     //fwrite(&broken_byte, sizeof(char), 1, f);
-    fwrite(watermarked_buffer, sizeof(char), BUFFER_SIZE, f);
+    fwrite(watermarked_buffer, sizeof(unsigned short), BUFFER_SIZE, f);
 
-  }
   // TODO:
   fclose(f);
 }
@@ -157,39 +142,33 @@ void send(const char*msg, size_t length)
 void recv(char* buffer, size_t length)
 {
   // Alloca buffer
+  assert(length == 16);
   //char _buffer[BUFFER_SIZE];
-  char spreading_code[BUFFER_SIZE];
-  char watermarked_msg[BUFFER_SIZE];
+  unsigned short watermark[BUFFER_SIZE];
+  unsigned short watermarked_msg[BUFFER_SIZE];
+  unsigned short* recv_buffer = (unsigned short*) buffer;
 
-  size_t num_blocks = (length / BUFFER_SIZE);
-  size_t rem_bytes = length % BUFFER_SIZE;
-
-  if(rem_bytes > 0)
-    ++num_blocks;
-
+  memset(watermark, 0, BUFFER_SIZE);
   // TODO: change when network modem lib available
   FILE* f = fopen("transit_data.dat", "rb+");
 
-  for(size_t i=0; i < num_blocks; ++i){
-    char *recv_buffer = buffer + BUFFER_SIZE * i; 
-    unsigned short seq_num;
-    size_t nbytes;
-    fread(&seq_num, sizeof(unsigned short), 1, f);
-    nbytes = fread(watermarked_msg, sizeof(char), (i == num_blocks - 1 && rem_bytes > 0 ? rem_bytes : BUFFER_SIZE), f);
+  fread(watermarked_msg, sizeof(unsigned short), BUFFER_SIZE, f);
 
-    char watermark = extract_watermark(watermarked_msg, HADAMARD_ROW);
-    spreading(watermark, HADAMARD_ROW, spreading_code);
+  printf("In recv watermarked message in hex: ");
+  formatted_print(watermarked_msg);
+  printf("In recv watermarked message as a string: %s\n", (const char*)watermarked_msg);
 
+  unsigned char info_bits = extract_watermark(watermarked_msg, HADAMARD_ROW);
+  
+  printf("In recv info bits in the recv as hex %hhX and %c as char \n", info_bits, info_bits);
+  
+  spreading(info_bits, HADAMARD_ROW, watermark);
+  printf("Watermark in the recv\n");
+  formatted_print(watermark);
 
-    printf("Watermark in the recv: %hhX\n", watermark);
-
-    printf("Spreading code in the recv\n");
-    formatted_print(spreading_code);
-
-    // 2. Moltiplicazione tra il messaggio e lo spreading code
-    for (size_t i = 0; i < nbytes; ++i)
-      recv_buffer[i] = watermarked_msg[i] ^ spreading_code[i];   
-  }
-
+  // 2. Moltiplicazione tra il messaggio e lo spreading code
+  for (size_t i = 0; i < BUFFER_SIZE; ++i)
+    recv_buffer[i] = watermarked_msg[i] ^ watermark[i];   
 }
+
 
