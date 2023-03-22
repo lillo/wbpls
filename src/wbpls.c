@@ -65,7 +65,7 @@ unsigned char reverse_bits(unsigned char b) {
 */
 
 unsigned char extract_watermark(unsigned short bitstream[BUFFER_SIZE], size_t hadamard_row){
-  char correlation[BUFFER_SIZE] = {0};
+  unsigned short correlation[BUFFER_SIZE] = {0};
   unsigned char extracted_wat = 0;
   unsigned char max = 0;
   
@@ -97,9 +97,9 @@ void send(const char*msg, size_t length)
   // Alloca buffer
   assert(length == 16);
 
-  unsigned short watermarked_buffer[BUFFER_SIZE];
-  unsigned short watermark[BUFFER_SIZE];
-  unsigned short tmp_buffer[BUFFER_SIZE];
+  unsigned short watermarked_buffer[BUFFER_SIZE] = {0};
+  unsigned short watermark[BUFFER_SIZE] = {0};
+  unsigned short tmp_buffer[BUFFER_SIZE] = {0};
   unsigned short *msg_buffer = (unsigned short*) msg;
   unsigned char first_byte = msg[0];
 
@@ -144,13 +144,13 @@ void recv(char* buffer, size_t length)
   // Alloca buffer
   assert(length == 16);
   //char _buffer[BUFFER_SIZE];
-  unsigned short watermark[BUFFER_SIZE];
-  unsigned short watermarked_msg[BUFFER_SIZE];
+  unsigned short watermark[BUFFER_SIZE] = {0};
+  unsigned short watermarked_msg[BUFFER_SIZE] = {0};
   unsigned short* recv_buffer = (unsigned short*) buffer;
 
-  memset(watermark, 0, BUFFER_SIZE);
+  
   // TODO: change when network modem lib available
-  FILE* f = fopen("transit_data.dat", "rb+");
+  FILE* f = fopen("transit_data.dat", "rb");
 
   fread(watermarked_msg, sizeof(unsigned short), BUFFER_SIZE, f);
 
@@ -169,6 +169,9 @@ void recv(char* buffer, size_t length)
   // 2. Moltiplicazione tra il messaggio e lo spreading code
   for (size_t i = 0; i < BUFFER_SIZE; ++i)
     recv_buffer[i] = watermarked_msg[i] ^ watermark[i];   
+
+  printf("Reconstructed msg in the recv\n");
+  formatted_print(recv_buffer);
 }
 
 
