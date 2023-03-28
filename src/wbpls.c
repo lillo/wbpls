@@ -9,7 +9,7 @@
 
 const Configuration Default;
 
-#define HADAMARD_ROW 5
+#define HADAMARD_ROW 15
 
 /// @brief Hadamard matrix of size 16x16
 
@@ -77,9 +77,9 @@ unsigned char extract_watermark(unsigned short bitstream[BUFFER_SIZE], size_t ha
   printf("Bits of extracted watermark:");
   for(size_t i=0; i < WATERMARK_INFO_LENGTH; ++i){
     if(correlation[i] >= 0.7 * max)
-      extracted_wat |= 0x1;
-    if(i != WATERMARK_INFO_LENGTH - 1)
-      extracted_wat <<= 1;   
+      extracted_wat |= 0x1 << (WATERMARK_INFO_LENGTH - i - 1);
+    //if(i != WATERMARK_INFO_LENGTH - 1)
+    //  extracted_wat <<= 1;   
       //if(i < WATERMARK_INFO_LENGTH - 1)  
     printf("%d", (correlation[i] >= 0.7 * max));
   }
@@ -95,7 +95,7 @@ unsigned char extract_watermark(unsigned short bitstream[BUFFER_SIZE], size_t ha
 void send(const char*msg, size_t length)
 {
   // Alloca buffer
-  assert(length == 16);
+  assert(length == BUFFER_SIZE * 2);
 
   unsigned short watermarked_buffer[BUFFER_SIZE] = {0};
   unsigned short watermark[BUFFER_SIZE] = {0};
