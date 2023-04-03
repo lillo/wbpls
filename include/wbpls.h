@@ -3,23 +3,12 @@
 
 #define PACKET_SIZE 8
 
-extern const double deffreq0msg;
-extern const double deffreq1msg;
-extern const double deffreq0sc;
-extern const double deffreq1sc;
-
 // Types
 typedef struct {
-  unsigned int fmsg0, fmsg1, fsc0, fsc1;
+  unsigned int hadamard_row;
 } Configuration;
 
 extern const Configuration Defaultpyth;
-
-typedef struct {
-  char data[PACKET_SIZE];
-} Pack;
-
-typedef Pack* Packet;
 
 // Function prototypes
 
@@ -29,7 +18,7 @@ typedef Pack* Packet;
  *  recv:
  */
 void init(const Configuration*);
-void send(Packet);
-Packet recv();
+void send(const char* msg, size_t length);
+void recv(char* buffer, size_t length);
 
 #endif
