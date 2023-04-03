@@ -34,8 +34,8 @@ int main(){
   printf("Extracted watermark: %x\n", extract_watermark(msg, 5));
 */
   
-  char msg[17] = "This_is_a_secret"; //"FKFKFKFKFKFKFKFK"; //"ABABABABABABABAB"; 
-  //"A5A5A5A5A5A5A5A5";//;// ;//; 
+  char msg[17] = "\xff\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"; //"This_is_a_secret"; //"FKFKFKFKFKFKFKFK"; //"ABABABABABABABAB"; 
+  //;//;// ;//; 
   //"WHAT_THE_FUCK!!!"
   //"FUCKFUCKFUCKFUCK"
   //"FUKFUKFUKFUKFUKF"
@@ -43,7 +43,7 @@ int main(){
   char buffer[17] = {0};
 
   printf("Messaggio originale:\n-%s-\n", msg);
-  send(msg, strlen(msg));
+  send(msg, 16);
 
   recv(buffer,16);
 
