@@ -4,15 +4,15 @@
 #include <time.h>
 #include <string.h>
 
-
 #define KEY_LEN 16
 #define WATERMARK_LEN 8
 #define BITSTREAM_LEN 128
-#define MESSAGE_LEN 16
+//#define MESSAGE_LEN 16
 
-#define AWGN_ON 1
+#define AWGN_ON 0
 #define JAM_ON  0
 #define RANDOM_BITS 0
+#define FIXED_BITS 0
 
 // Private functions
 void hadamard(int n, int matrix[][n], int key[]) {
@@ -41,7 +41,7 @@ void spread_watermark(int *watermark_spread, int *watermark_bits, int *key) {
 void embed_watermark(int *watermarked_bitstream, int *watermark_spread, int *bitstream) {
     int i;
     for (i = 0; i < BITSTREAM_LEN; i++) {
-        watermarked_bitstream[i] = bitstream[i] ^ watermark_spread[i];
+        watermarked_bitstream[i] = bitstream[i] + watermark_spread[i];
     }
 }
 
@@ -50,7 +50,6 @@ void embed_watermark(int *watermarked_bitstream, int *watermark_spread, int *bit
     static int extracted_watermark_bits[WATERMARK_LEN]; // static array to hold the extracted bits
     int i, j;
     float correlation[WATERMARK_LEN] = {0};
-    int weights[KEY_LEN] = {32768, 16834,8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1}; // weights for each bit position of the key
 
     float norm;
     float max_corr = 0;
@@ -68,16 +67,21 @@ void embed_watermark(int *watermarked_bitstream, int *watermark_spread, int *bit
 
     for (i = 0; i < WATERMARK_LEN; i++) {
         for (j = 0; j < KEY_LEN; j++) {
-            correlation[i] += watermarked_bitstream[i * KEY_LEN + j] * key[j] * weights[j]/max_norm;
-            if (correlation[i] > max_corr) {
-                max_corr = correlation[i];
+            correlation[i] += watermarked_bitstream[i * KEY_LEN + j] * key[j]/ max_norm;
+            if (fabs(correlation[i]) > max_corr) {
+                max_corr = fabs(correlation[i]);
             }
         }
     }
 
-    float th_corr = 0.7 * max_corr;
+    //float th_corr = 0.7 * max_corr;
+    float th_corr = 0;
     for (i = 0; i < WATERMARK_LEN; i++) {
-        extracted_watermark_bits[i] = (correlation[i] > th_corr);
+        if (correlation[i] > 0 && correlation[i] >= th_corr) {
+            extracted_watermark_bits[i] = 1;
+        } else if (correlation[i] < 0 && fabs(correlation[i]) >= th_corr) {
+            extracted_watermark_bits[i] = -1;
+        }
     }
     return extracted_watermark_bits;
 }
@@ -119,7 +123,7 @@ void recover_bitstream(int *extracted_watermark_bits, int *key, int *watermarked
     printf("\n\n");
 
     for (i = 0; i < BITSTREAM_LEN; i++) {
-        rec_bitstream[i] = watermarked_bitstream[i] ^ rec_watermark_spread[i];
+       rec_bitstream[i] = watermarked_bitstream[i] - rec_watermark_spread[i];
     }
 }
 
@@ -127,15 +131,15 @@ void recover_bitstream(int *extracted_watermark_bits, int *key, int *watermarked
 // Main program
 int main() {
 
-    int key[KEY_LEN];
+    int key[KEY_LEN]={0};
     int bitstream[BITSTREAM_LEN];
     int rec_bitstream[BITSTREAM_LEN];
     int watermark_bits[WATERMARK_LEN];
     int watermark_spread[BITSTREAM_LEN];
     int watermarked_bitstream[BITSTREAM_LEN];
     //char msg[] = "This_is_a_secret";
-   // char msg[] = "A5rt9?xZLM1q@wsi";
-char msg[] = "This_FF_A_55FF?m";
+   //char msg[] = "A5rt9?xZLM1q@wsi";
+    char msg[] = "This_FF_A_55FF?m";
 
     int i;
     int hadamard_matrix[KEY_LEN][KEY_LEN];
@@ -147,16 +151,18 @@ char msg[] = "This_FF_A_55FF?m";
     // Spreading code
     hadamard(KEY_LEN, hadamard_matrix, key);
     for (i = 0; i < KEY_LEN; i++) {
-        key[i] = (hadamard_matrix[4][i] + 1) / 2;
+        key[i] = (hadamard_matrix[3][i]) ;
     }
 
-    if (RANDOM_BITS) {
-        // Generate random bitstream
-        srand(time(NULL)); // Initialize random number generator
-        for (i = 0; i < BITSTREAM_LEN; i++) {
-            bitstream[i] = rand() % 2; // Generate random 0 or 1
-        }
-    }else {
+    if (RANDOM_BITS == 1) {
+    // Generate random bitstream
+    srand(time(NULL)); // Initialize random number generator
+    for (i = 0; i < BITSTREAM_LEN; i++) {
+        bitstream[i] = rand() % 2; // Generate random 0 or 1
+    }
+    }else if (FIXED_BITS == 1) {
+       //
+    } else {
         // Convert each character in the message to its corresponding binary representation
         int len = strlen(msg);
         int j,k;
@@ -166,7 +172,8 @@ char msg[] = "This_FF_A_55FF?m";
 
             // Convert the ASCII value to binary and store it in the bitstream
             for (j = 7, k = i * 8; j >= 0; j--, k++) {
-                bitstream[k] = (ascii_val >> j) & 1;
+                //bitstream[k] = (ascii_val >> j) & 1;          // Bits between  0 and 1
+                bitstream[k] = ((ascii_val >> j) & 1) * 2 - 1;  // Bits between  -1 and 1
             }
         }
     }
