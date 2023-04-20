@@ -34,20 +34,17 @@ int main(){
   printf("Extracted watermark: %x\n", extract_watermark(msg, 5));
 */
   
-  char msg[17] = "\xff\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"; //"This_is_a_secret"; //"FKFKFKFKFKFKFKFK"; //"ABABABABABABABAB"; 
+  char msg[9] = "abcdefgh"; //"This_is_a_secret"; //"FKFKFKFKFKFKFKFK"; //"ABABABABABABABAB"; 
   //;//;// ;//; 
   //"WHAT_THE_FUCK!!!"
   //"FUCKFUCKFUCKFUCK"
   //"FUKFUKFUKFUKFUKF"
   //"FKFKFKFKFKFKFKFK"
-  char buffer[17] = {0};
+  
 
   printf("Messaggio originale:\n-%s-\n", msg);
-  send(msg, 16);
-
-  recv(buffer,16);
-
-  printf("Messaggio letto:\n-%s-\n", buffer);
-
+  send(msg, 8);
+  recv(msg, 8);
+  printf("Messaggio ricevuto:\n-%s-\n", msg);
   return EXIT_SUCCESS;  
 }
